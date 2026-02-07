@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [githubToken, setGithubToken] = useState<string | null>(
-    () => sessionStorage.getItem(GITHUB_TOKEN_KEY)
+    () => localStorage.getItem(GITHUB_TOKEN_KEY)
   );
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       if (!user) {
         setGithubToken(null);
-        sessionStorage.removeItem(GITHUB_TOKEN_KEY);
+        localStorage.removeItem(GITHUB_TOKEN_KEY);
       }
     });
 
@@ -70,14 +70,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const credential: OAuthCredential | null = GithubAuthProvider.credentialFromResult(result);
     if (credential?.accessToken) {
       setGithubToken(credential.accessToken);
-      sessionStorage.setItem(GITHUB_TOKEN_KEY, credential.accessToken);
+      localStorage.setItem(GITHUB_TOKEN_KEY, credential.accessToken);
     }
   };
 
   const signOut = async () => {
     await firebaseSignOut(auth);
     setGithubToken(null);
-    sessionStorage.removeItem(GITHUB_TOKEN_KEY);
+    localStorage.removeItem(GITHUB_TOKEN_KEY);
   };
 
   return (
