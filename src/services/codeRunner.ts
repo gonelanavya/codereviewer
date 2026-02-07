@@ -1,4 +1,4 @@
-const PISTON_API = "https://corsproxy.io/?url=https://emkc.org/api/v2/piston";
+const PISTON_API = "https://emkc.org/api/v2/piston";
 
 interface PistonRuntime {
   language: string;

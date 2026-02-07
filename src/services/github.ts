@@ -61,32 +61,16 @@ async function githubFetch(
   token: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  if (!token) {
-    throw new Error("GitHub token is missing. Please sign out and sign back in with GitHub.");
-  }
-
-  try {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      ...options,
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github.v3+json",
-        "Content-Type": "application/json",
-        ...((options.headers as Record<string, string>) || {}),
-      },
-    });
-
-    if (res.status === 401) {
-      throw new Error("GitHub token expired. Please sign out and sign back in with GitHub.");
-    }
-
-    return res;
-  } catch (error) {
-    if (error instanceof TypeError && error.message === "Failed to fetch") {
-      throw new Error("Network error connecting to GitHub. Check your internet connection and try again.");
-    }
-    throw error;
-  }
+  const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: {
+      Authorization: `token ${token}`,
+      Accept: "application/vnd.github.v3+json",
+      "Content-Type": "application/json",
+      ...((options.headers as Record<string, string>) || {}),
+    },
+  });
+  return res;
 }
 
 async function getAuthenticatedUser(token: string): Promise<string> {
