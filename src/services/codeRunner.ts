@@ -157,18 +157,62 @@ export async function runCode(
       }
     }
     
-    // If all APIs fail, return a helpful error
-    return {
-      stdout: "",
-      stderr: "All code execution services are currently unavailable. Please try again later or use a local compiler.",
-      exitCode: 1,
-      isError: true,
-    };
+    // If all APIs fail, try local execution for simple cases
+    return tryLocalExecution(code, language, stdin);
     
   } catch (error) {
     return {
       stdout: "",
       stderr: error instanceof Error ? error.message : "Failed to execute code",
+      exitCode: 1,
+      isError: true,
+    };
+  }
+}
+
+// Local execution fallback for simple cases
+function tryLocalExecution(code: string, language: string, stdin?: string): RunResult {
+  try {
+    // Only support simple JavaScript execution locally
+    if (language === "javascript" || language === "js") {
+      // Create a safe execution environment
+      const consoleOutput: string[] = [];
+      const customConsole = {
+        log: (...args: any[]) => {
+          consoleOutput.push(args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+          ).join(' '));
+        },
+        error: (...args: any[]) => {
+          consoleOutput.push('ERROR: ' + args.map(arg => 
+            typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+          ).join(' '));
+        }
+      };
+
+      // Create a function with the code and execute it
+      const executeCode = new Function('console', code);
+      executeCode(customConsole);
+
+      return {
+        stdout: consoleOutput.join('\n'),
+        stderr: "",
+        exitCode: 0,
+        isError: false,
+      };
+    }
+
+    // For other languages, provide helpful guidance
+    return {
+      stdout: "",
+      stderr: `Local execution is only supported for JavaScript. For ${language}, please:\n1. Use an online compiler like CodePen, Replit, or JSFiddle\n2. Install a local compiler/interpreter\n3. Try again later when external services are available`,
+      exitCode: 1,
+      isError: true,
+    };
+  } catch (error) {
+    return {
+      stdout: "",
+      stderr: `Local execution error: ${error instanceof Error ? error.message : 'Unknown error'}`,
       exitCode: 1,
       isError: true,
     };
