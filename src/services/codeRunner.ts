@@ -95,9 +95,23 @@ export async function runCode(
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "Unknown error");
+      
+      // Provide helpful error messages based on common issues
+      let errorMessage = `Execution service error: ${errText}`;
+      
+      if (errText.includes("whitelist") || errText.includes("Public Piston API")) {
+        errorMessage = "Code execution is temporarily unavailable due to API restrictions. Please try again later.";
+      } else if (errText.includes("CORS") || errText.includes("corsproxy")) {
+        errorMessage = "Code execution service is experiencing network issues. Please try again in a few moments.";
+      } else if (res.status === 429) {
+        errorMessage = "Too many requests. Please wait a moment before trying again.";
+      } else if (res.status >= 500) {
+        errorMessage = "Execution service is temporarily unavailable. Please try again later.";
+      }
+      
       return {
         stdout: "",
-        stderr: `Execution service error: ${errText}`,
+        stderr: errorMessage,
         exitCode: 1,
         isError: true,
       };
