@@ -78,9 +78,13 @@ export async function runCode(
   const filename = getFileExtension(language);
 
   try {
+    console.log("Starting code execution for language:", language);
+    console.log("Code length:", code.length);
+    
     // Try multiple execution APIs in order
     for (const apiUrl of CODE_EXECUTION_APIS) {
       try {
+        console.log("Trying API:", apiUrl);
         let requestBody;
         let responseFormat: string;
         
@@ -112,14 +116,19 @@ export async function runCode(
           responseFormat = "default";
         }
         
+        console.log("Request body:", JSON.stringify(requestBody).substring(0, 200) + "...");
+        
         const res = await fetch(apiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(requestBody),
         });
 
+        console.log("API response status:", res.status);
+        
         if (res.ok) {
           const data = await res.json();
+          console.log("API response data:", data);
           
           // Parse response based on API format
           if (responseFormat === "jdoodle") {
@@ -150,6 +159,9 @@ export async function runCode(
               isError: exitCode !== 0,
             };
           }
+        } else {
+          const errorText = await res.text();
+          console.log("API error response:", errorText);
         }
       } catch (apiError) {
         console.warn(`API ${apiUrl} failed:`, apiError);
@@ -157,6 +169,7 @@ export async function runCode(
       }
     }
     
+    console.log("All APIs failed, trying local execution");
     // If all APIs fail, try local execution for simple cases
     return tryLocalExecution(code, language, stdin);
     
