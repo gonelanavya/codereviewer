@@ -1,11 +1,11 @@
-const JUDGE0_API = "https://api.judge0.com/execute";
+const REXTESTER_API = "https://rextester.com/api/execute";
 
-interface Judge0Runtime {
+interface RextesterRuntime {
   language: string;
   version: string;
 }
 
-interface Judge0ExecuteResponse {
+interface RextesterExecuteResponse {
   stdout: string;
   stderr: string;
   code: number;
@@ -72,7 +72,7 @@ export async function runCode(
   const filename = getFileExtension(language);
 
   try {
-    const res = await fetch(JUDGE0_API, {
+    const res = await fetch(REXTESTER_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -91,7 +91,7 @@ export async function runCode(
       // Provide helpful error messages based on common issues
       let errorMessage = `Execution service error: ${errText}`;
       
-      if (errText.includes("whitelist") || errText.includes("Public Piston API")) {
+      if (errText.includes("whitelist") || errText.includes("API restrictions")) {
         errorMessage = "Code execution is temporarily unavailable due to API restrictions. Please try again later.";
       } else if (errText.includes("CORS") || errText.includes("corsproxy")) {
         errorMessage = "Code execution service is experiencing network issues. Please try again in a few moments.";
@@ -109,7 +109,7 @@ export async function runCode(
       };
     }
 
-    const data: Judge0ExecuteResponse = await res.json();
+    const data: RextesterExecuteResponse = await res.json();
 
     const stdout = data.stdout || "";
     const stderr = data.stderr || "";
