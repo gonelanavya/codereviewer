@@ -140,6 +140,46 @@ function parseReviewResponse(review: ReviewResponse["review"]): ReviewIssue[] {
     return false;
   };
 
+// Post-processing filter to detect and remove generic suggestions
+function filterGenericSuggestions(issues: ReviewIssue[]): ReviewIssue[] {
+  return issues.filter(issue => {
+    const titleLower = issue.title.toLowerCase();
+    const suggestionLower = issue.suggestion.toLowerCase();
+    
+    // Generic improvement phrases that indicate over-engineering
+    const genericPhrases = [
+      "consider refactoring",
+      "improve readability",
+      "best practices",
+      "time complexity",
+      "space complexity",
+      "add comments",
+      "improve structure",
+      "make code more",
+      "enhance performance",
+      "optimize further",
+      "better approach",
+      "cleaner code",
+      "more efficient",
+      "simplify logic",
+      "reduce complexity"
+    ];
+    
+    // Check if title or suggestion contains generic phrases
+    const isGeneric = genericPhrases.some(phrase => 
+      titleLower.includes(phrase) || suggestionLower.includes(phrase)
+    );
+    
+    // Also block very short, vague suggestions
+    const isVague = issue.title.length < 15 || suggestionLower.length < 20;
+    
+    // Block if generic OR vague
+    if (isGeneric || isVague) return false;
+    
+    return issue;
+  });
+}
+
   for (const severity of severityOrder) {
     const items = review[severity] || [];
     for (const item of items) {
@@ -165,7 +205,10 @@ function parseReviewResponse(review: ReviewResponse["review"]): ReviewIssue[] {
     if (issues.length >= MAX_ISSUES) break;
   }
 
-  return issues;
+  // Apply post-processing filter to remove generic suggestions
+  const filteredIssues = filterGenericSuggestions(issues);
+
+  return filteredIssues;
 }
 
 function extractParts(text: string): {
