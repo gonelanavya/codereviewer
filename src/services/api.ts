@@ -22,12 +22,30 @@ export const analyzeCode = async (
   language: string,
   task: "review" | "rewrite"
 ): Promise<ReviewIssue[] | string> => {
+  // Add strict instructions to the request
+  const strictInstructions = task === "review" 
+    ? `CRITICAL: Only identify REAL defects (bugs, security issues, undefined behavior, performance bottlenecks).
+      DO NOT suggest refactoring unless there is a real problem.
+      DO NOT add time/space complexity analysis for simple programs.
+      DO NOT add comments, documentation, or extra abstractions unless necessary.
+      If code is correct and follows conventions, respond: "No issues found. The code is correct and does not require changes."
+      Keep suggestions minimal and necessary only.`
+    : `CRITICAL: Only rewrite if it meaningfully improves clarity, safety, or performance.
+      DO NOT over-engineer or add unnecessary complexity.
+      Preserve beginner-friendliness and simplicity.
+      If no real improvement is needed, return original code unchanged.`;
+
   const response = await fetch(`${API_URL}/analyze`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ code, language, task }),
+    body: JSON.stringify({ 
+      code, 
+      language, 
+      task,
+      instructions: strictInstructions
+    }),
   });
 
   if (!response.ok) {
@@ -40,7 +58,18 @@ export const analyzeCode = async (
     return parseReviewResponse(data.review);
   } else {
     const data: RewriteResponse = await response.json();
-    return stripCodeFences(data.rewritten_code);
+    const rewrittenCode = stripCodeFences(data.rewritten_code);
+    
+    // If the rewritten code is the same as original, return original
+    // This prevents unnecessary rewrites of correct code
+    const normalizedOriginal = code.replace(/\s+/g, ' ').trim();
+    const normalizedRewritten = rewrittenCode.replace(/\s+/g, ' ').trim();
+    
+    if (normalizedOriginal === normalizedRewritten) {
+      return code; // Return original unchanged
+    }
+    
+    return rewrittenCode;
   }
 };
 
@@ -84,6 +113,33 @@ function parseReviewResponse(review: ReviewResponse["review"]): ReviewIssue[] {
 
   const severityOrder: (keyof ReviewResponse["review"])[] = ["Critical", "High", "Medium", "Low"];
 
+  // Additional guardrails to prevent over-engineering
+  const isOverEngineered = (title: string, suggestion: string): boolean => {
+    const titleLower = title.toLowerCase();
+    const suggestionLower = suggestion.toLowerCase();
+    
+    // Block generic refactoring suggestions
+    if (titleLower.includes("refactor") || suggestionLower.includes("refactor")) return true;
+    if (titleLower.includes("restructure") || suggestionLower.includes("restructure")) return true;
+    
+    // Block generic complexity additions
+    if (titleLower.includes("complex") || suggestionLower.includes("complex")) return true;
+    if (titleLower.includes("abstract") || suggestionLower.includes("abstract")) return true;
+    
+    // Block unnecessary documentation/comments
+    if (titleLower.includes("comment") || suggestionLower.includes("comment")) return true;
+    if (titleLower.includes("document") || suggestionLower.includes("document")) return true;
+    
+    // Block generic "consider" suggestions unless specific
+    if (titleLower.startsWith("consider") && suggestionLower.length < 30) return true;
+    
+    // Block time/space complexity for simple code
+    if (titleLower.includes("time complexity") || titleLower.includes("space complexity")) return true;
+    if (titleLower.includes("big o") || titleLower.includes("o(n)")) return true;
+    
+    return false;
+  };
+
   for (const severity of severityOrder) {
     const items = review[severity] || [];
     for (const item of items) {
@@ -93,6 +149,9 @@ function parseReviewResponse(review: ReviewResponse["review"]): ReviewIssue[] {
       if (!cleaned || isNoiseItem(cleaned)) continue;
 
       const { title, description, suggestion } = extractParts(cleaned);
+      
+      // Final guardrail: filter out over-engineered suggestions
+      if (isOverEngineered(title, suggestion)) continue;
       if (isDuplicate(issues, title)) continue;
 
       issues.push({
