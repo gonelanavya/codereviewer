@@ -6,10 +6,12 @@ interface RextesterRuntime {
 }
 
 interface RextesterExecuteResponse {
-  stdout: string;
-  stderr: string;
-  code: number;
-  output: string;
+  stdout?: string;
+  output?: string;
+  stderr?: string;
+  errors?: string;
+  code?: number;
+  exit_code?: number;
 }
 
 export interface RunResult {
@@ -78,7 +80,7 @@ export async function runCode(
       body: JSON.stringify({
         language: runtime.language,
         version: runtime.version,
-        files: [{ name: filename, content: code }],
+        code: code,
         stdin: stdin || "",
         compile_timeout: 10000,
         run_timeout: 10000,
@@ -111,15 +113,16 @@ export async function runCode(
 
     const data: RextesterExecuteResponse = await res.json();
 
-    const stdout = data.stdout || "";
-    const stderr = data.stderr || "";
-    const fallbackOutput = (!stdout && !stderr && data.output) ? data.output : "";
+    // Rextester API returns different field names
+    const stdout = data.stdout || data.output || "";
+    const stderr = data.stderr || data.errors || "";
+    const exitCode = data.code || data.exit_code || 0;
 
     return {
-      stdout: stdout || fallbackOutput,
-      stderr,
-      exitCode: data.code,
-      isError: data.code !== 0,
+      stdout: stdout,
+      stderr: stderr,
+      exitCode: exitCode,
+      isError: exitCode !== 0,
     };
   } catch (error) {
     return {
