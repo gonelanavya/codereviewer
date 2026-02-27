@@ -55,6 +55,13 @@ export const analyzeCode = async (
 
   if (task === "review") {
     const data: ReviewResponse = await response.json();
+    
+    // Validate backend response structure
+    if (!data || !data.review || typeof data.review !== 'object') {
+      console.error("Invalid backend response structure:", data);
+      return []; // Return empty array to prevent crashes
+    }
+    
     return parseReviewResponse(data.review);
   } else {
     const data: RewriteResponse = await response.json();

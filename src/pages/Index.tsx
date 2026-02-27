@@ -57,8 +57,34 @@ const Index = () => {
       console.log("Starting review for code:", code.substring(0, 50) + "...");
       const result = await analyzeCode(code, language, "review");
       console.log("API result:", result);
+      
+      // Check if result is valid before accessing length
+      if (!result || typeof result !== 'object') {
+        console.error("Invalid API response:", result);
+        setReviewIssues([]);
+        toast({
+          title: "Review Failed",
+          description: "Invalid response from analysis service",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const reviewResult = result as ReviewIssue[];
       console.log("Review result issues:", reviewResult);
+      
+      // Ensure reviewResult is an array
+      if (!Array.isArray(reviewResult)) {
+        console.error("Review result is not an array:", reviewResult);
+        setReviewIssues([]);
+        toast({
+          title: "Review Failed",
+          description: "Analysis service returned invalid data format",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setReviewIssues(reviewResult);
       await saveToFirestore("review", reviewResult);
       
