@@ -208,10 +208,8 @@ function filterGenericSuggestions(issues: ReviewIssue[]): ReviewIssue[] {
     if (issues.length >= MAX_ISSUES) break;
   }
 
-  // Apply post-processing filter to remove generic suggestions
-  const filteredIssues = filterGenericSuggestions(issues);
-
-  return filteredIssues;
+  // Temporarily disable filtering to debug blank page issue
+  return issues;
 }
 
 function extractParts(text: string): {

@@ -54,8 +54,11 @@ const Index = () => {
     setReviewIssues([]);
 
     try {
+      console.log("Starting review for code:", code.substring(0, 50) + "...");
       const result = await analyzeCode(code, language, "review");
+      console.log("API result:", result);
       const reviewResult = result as ReviewIssue[];
+      console.log("Review result issues:", reviewResult);
       setReviewIssues(reviewResult);
       await saveToFirestore("review", reviewResult);
       
