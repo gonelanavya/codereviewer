@@ -1,23 +1,15 @@
-const PISTON_API = "https://emkc.org/api/v2/piston";
+const JUDGE0_API = "https://api.judge0.com/execute";
 
-interface PistonRuntime {
+interface Judge0Runtime {
   language: string;
   version: string;
 }
 
-interface PistonExecuteResponse {
-  run: {
-    stdout: string;
-    stderr: string;
-    code: number;
-    output: string;
-  };
-  compile?: {
-    stdout: string;
-    stderr: string;
-    code: number;
-    output: string;
-  };
+interface Judge0ExecuteResponse {
+  stdout: string;
+  stderr: string;
+  code: number;
+  output: string;
 }
 
 export interface RunResult {
@@ -80,7 +72,7 @@ export async function runCode(
   const filename = getFileExtension(language);
 
   try {
-    const res = await fetch(`${PISTON_API}/execute`, {
+    const res = await fetch(JUDGE0_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -117,26 +109,17 @@ export async function runCode(
       };
     }
 
-    const data: PistonExecuteResponse = await res.json();
+    const data: Judge0ExecuteResponse = await res.json();
 
-    if (data.compile && data.compile.code !== 0) {
-      return {
-        stdout: "",
-        stderr: data.compile.stderr || data.compile.output || "Compilation failed",
-        exitCode: data.compile.code,
-        isError: true,
-      };
-    }
-
-    const stdout = data.run.stdout || "";
-    const stderr = data.run.stderr || "";
-    const fallbackOutput = (!stdout && !stderr && data.run.output) ? data.run.output : "";
+    const stdout = data.stdout || "";
+    const stderr = data.stderr || "";
+    const fallbackOutput = (!stdout && !stderr && data.output) ? data.output : "";
 
     return {
       stdout: stdout || fallbackOutput,
       stderr,
-      exitCode: data.run.code,
-      isError: data.run.code !== 0,
+      exitCode: data.code,
+      isError: data.code !== 0,
     };
   } catch (error) {
     return {
