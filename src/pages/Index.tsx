@@ -17,6 +17,7 @@ const Index = () => {
   const [isReviewing, setIsReviewing] = useState(false);
   const [isRewriting, setIsRewriting] = useState(false);
   const [reviewIssues, setReviewIssues] = useState<ReviewIssue[]>([]);
+  const [reviewAttempted, setReviewAttempted] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [rewrittenCode, setRewrittenCode] = useState("");
 
@@ -49,6 +50,7 @@ const Index = () => {
     
     setIsReviewing(true);
     setShowComparison(false);
+    setReviewAttempted(true);
     setReviewIssues([]);
 
     try {
@@ -201,7 +203,7 @@ function example() {
 
           {/* Right Panel - Results */}
           <div className="glass-card rounded-2xl p-5 md:p-6">
-            <ReviewResults issues={reviewIssues} isLoading={isReviewing} />
+            <ReviewResults issues={reviewIssues} isLoading={isReviewing} reviewAttempted={reviewAttempted} />
           </div>
         </div>
 

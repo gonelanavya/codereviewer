@@ -17,6 +17,7 @@ export interface ReviewIssue {
 interface ReviewResultsProps {
   issues: ReviewIssue[];
   isLoading: boolean;
+  reviewAttempted?: boolean;
 }
 
 const severityConfig = {
@@ -50,7 +51,7 @@ const severityConfig = {
   },
 };
 
-const ReviewResults = ({ issues, isLoading }: ReviewResultsProps) => {
+const ReviewResults = ({ issues, isLoading, reviewAttempted = false }: ReviewResultsProps) => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-4">
@@ -73,13 +74,18 @@ const ReviewResults = ({ issues, isLoading }: ReviewResultsProps) => {
   if (issues.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[300px] gap-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center">
-          <Lightbulb className="w-8 h-8 text-muted-foreground" />
+        <div className="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center">
+          <Lightbulb className="w-8 h-8 text-green-500" />
         </div>
         <div>
-          <p className="text-foreground font-medium">No issues found yet</p>
+          <p className="text-foreground font-medium">
+            {reviewAttempted ? "Perfect code!" : "No issues found yet"}
+          </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Paste your code and click "Review Code" to get started
+            {reviewAttempted 
+              ? "The input code is correct, nothing to optimize." 
+              : "Paste your code and click 'Review Code' to get started"
+            }
           </p>
         </div>
       </div>

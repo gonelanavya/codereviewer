@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import TwoFactorAuth from "@/components/TwoFactorAuth";
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,7 +16,7 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const { user, loading: authLoading, signIn, signUp, signInWithGoogle, signInWithGithub } = useAuth();
+  const { user, loading: authLoading, pendingUser, signIn, signUp, signInWithGoogle, signInWithGithub, cancel2FA } = useAuth();
   const { toast } = useToast();
 
   if (authLoading) {
@@ -28,6 +29,10 @@ const Login = () => {
 
   if (user) {
     return <Navigate to="/editor" replace />;
+  }
+
+  if (pendingUser) {
+    return <TwoFactorAuth onBack={cancel2FA} />;
   }
 
   function getFriendlyError(error: any): string {
@@ -62,10 +67,10 @@ const Login = () => {
     try {
       if (isLogin) {
         await signIn(email, password);
-        toast({ title: "Welcome back!", description: "Successfully signed in." });
+        // 2FA verification will be shown automatically
       } else {
         await signUp(name.trim(), email, password);
-        toast({ title: "Account created!", description: `Welcome to CodeReview, ${name.trim()}!` });
+        // 2FA verification will be shown automatically
       }
     } catch (error: any) {
       toast({

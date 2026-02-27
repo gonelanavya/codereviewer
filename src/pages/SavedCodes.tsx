@@ -11,8 +11,10 @@ import {
   Edit3,
   X,
   ExternalLink,
+  StickyNote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/Navbar";
 import CodeEditor from "@/components/CodeEditor";
 import CodeRunner from "@/components/CodeRunner";
@@ -37,6 +39,7 @@ const SavedCodes = () => {
   const [selectedFile, setSelectedFile] = useState<SavedCodeFile | null>(null);
   const [fileContent, setFileContent] = useState("");
   const [editedContent, setEditedContent] = useState("");
+  const [notes, setNotes] = useState("");
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -72,6 +75,9 @@ const SavedCodes = () => {
       const content = await getFileContent(githubToken, file.path);
       setFileContent(content);
       setEditedContent(content);
+      // Load saved notes for this file
+      const savedNotes = localStorage.getItem(`notes_${file.path}`);
+      setNotes(savedNotes || "");
     } catch {
       toast({
         title: "Error",
@@ -372,6 +378,27 @@ const SavedCodes = () => {
                   code={isEditing ? editedContent : fileContent}
                   language={selectedFile.language}
                 />
+
+                {/* Notes Section */}
+                <div className="border-t border-border/50 pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <StickyNote className="w-4 h-4 text-primary" />
+                    <h4 className="text-sm font-medium text-foreground">Notes</h4>
+                  </div>
+                  <Textarea
+                    placeholder="Add your notes about this code snippet..."
+                    value={notes}
+                    onChange={(e) => {
+                      const newNotes = e.target.value;
+                      setNotes(newNotes);
+                      // Auto-save to localStorage
+                      if (selectedFile) {
+                        localStorage.setItem(`notes_${selectedFile.path}`, newNotes);
+                      }
+                    }}
+                    className="min-h-[100px] resize-none bg-secondary/20 border-border/50 focus:border-primary/50 text-sm"
+                  />
+                </div>
               </div>
             )}
           </div>

@@ -17,11 +17,14 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   githubToken: string | null;
+  pendingUser: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithGithub: () => Promise<void>;
   signOut: () => Promise<void>;
+  verify2FA: (code: string) => Promise<void>;
+  cancel2FA: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +34,7 @@ const GITHUB_TOKEN_KEY = "codereview_github_token";
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [githubToken, setGithubToken] = useState<string | null>(
     () => sessionStorage.getItem(GITHUB_TOKEN_KEY)
   );
@@ -49,13 +53,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    setPendingUser(credential.user);
   };
 
   const signUp = async (name: string, email: string, password: string) => {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(credential.user, { displayName: name });
-    setUser({ ...credential.user, displayName: name } as User);
+    setPendingUser({ ...credential.user, displayName: name } as User);
+  };
+
+  const verify2FA = async (code: string) => {
+    if (!pendingUser) throw new Error("No pending user verification");
+    
+    // Simple 2FA: use a fixed code "123456" for demo
+    // In production, this would use Firebase's multi-factor auth or SMS/email verification
+    if (code === "123456") {
+      setUser(pendingUser);
+      setPendingUser(null);
+    } else {
+      throw new Error("Invalid verification code");
+    }
+  };
+
+  const cancel2FA = () => {
+    setPendingUser(null);
+    if (auth.currentUser) {
+      firebaseSignOut(auth);
+    }
   };
 
   const signInWithGoogle = async () => {
@@ -81,7 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, githubToken, signIn, signUp, signInWithGoogle, signInWithGithub, signOut }}>
+    <AuthContext.Provider value={{ user, loading, githubToken, pendingUser, signIn, signUp, signInWithGoogle, signInWithGithub, signOut, verify2FA, cancel2FA }}>
       {children}
     </AuthContext.Provider>
   );
