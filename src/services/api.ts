@@ -143,6 +143,9 @@ function parseReviewResponse(review: ReviewResponse["review"]): ReviewIssue[] {
 // Post-processing filter to detect and remove generic suggestions
 function filterGenericSuggestions(issues: ReviewIssue[]): ReviewIssue[] {
   return issues.filter(issue => {
+    // Simple safety check
+    if (!issue || !issue.title || !issue.suggestion) return false;
+    
     const titleLower = issue.title.toLowerCase();
     const suggestionLower = issue.suggestion.toLowerCase();
     
@@ -176,7 +179,7 @@ function filterGenericSuggestions(issues: ReviewIssue[]): ReviewIssue[] {
     // Block if generic OR vague
     if (isGeneric || isVague) return false;
     
-    return issue;
+    return true;
   });
 }
 

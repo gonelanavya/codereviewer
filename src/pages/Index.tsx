@@ -65,6 +65,8 @@ const Index = () => {
       });
     } catch (error) {
       console.error("Review failed:", error);
+      // Set empty issues array to prevent blank page
+      setReviewIssues([]);
       toast({
         title: "Review Failed",
         description: error instanceof Error ? error.message : "Failed to analyze code",
