@@ -1,4 +1,8 @@
-const REXTESTER_API = "https://rextester.com/api/execute";
+const CODE_EXECUTION_APIS = [
+  "https://api.jdoodle.com/v1/execute",
+  "https://emkc.org/api/v2/piston/execute",
+  "https://onecompiler.com/api/v1/execute"
+];
 
 interface RextesterRuntime {
   language: string;
@@ -74,56 +78,93 @@ export async function runCode(
   const filename = getFileExtension(language);
 
   try {
-    const res = await fetch(REXTESTER_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        language: runtime.language,
-        version: runtime.version,
-        code: code,
-        stdin: stdin || "",
-        compile_timeout: 10000,
-        run_timeout: 10000,
-      }),
-    });
+    // Try multiple execution APIs in order
+    for (const apiUrl of CODE_EXECUTION_APIS) {
+      try {
+        let requestBody;
+        let responseFormat: string;
+        
+        // Different APIs require different request formats
+        if (apiUrl.includes("jdoodle")) {
+          requestBody = {
+            script: code,
+            language: runtime.language,
+            versionIndex: "0",
+            stdin: stdin || "",
+          };
+          responseFormat = "jdoodle";
+        } else if (apiUrl.includes("piston")) {
+          requestBody = {
+            language: runtime.language,
+            version: runtime.version,
+            files: [{ name: filename, content: code }],
+            stdin: stdin || "",
+          };
+          responseFormat = "piston";
+        } else {
+          // Default format
+          requestBody = {
+            language: runtime.language,
+            version: runtime.version,
+            code: code,
+            stdin: stdin || "",
+          };
+          responseFormat = "default";
+        }
+        
+        const res = await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "Unknown error");
-      
-      // Provide helpful error messages based on common issues
-      let errorMessage = `Execution service error: ${errText}`;
-      
-      if (errText.includes("whitelist") || errText.includes("API restrictions")) {
-        errorMessage = "Code execution is temporarily unavailable due to API restrictions. Please try again later.";
-      } else if (errText.includes("CORS") || errText.includes("corsproxy")) {
-        errorMessage = "Code execution service is experiencing network issues. Please try again in a few moments.";
-      } else if (res.status === 429) {
-        errorMessage = "Too many requests. Please wait a moment before trying again.";
-      } else if (res.status >= 500) {
-        errorMessage = "Execution service is temporarily unavailable. Please try again later.";
+        if (res.ok) {
+          const data = await res.json();
+          
+          // Parse response based on API format
+          if (responseFormat === "jdoodle") {
+            return {
+              stdout: data.output || "",
+              stderr: data.error || "",
+              exitCode: data.exitCode || 0,
+              isError: !!data.error,
+            };
+          } else if (responseFormat === "piston") {
+            const stdout = data.run?.stdout || "";
+            const stderr = data.run?.stderr || "";
+            return {
+              stdout: stdout,
+              stderr: stderr,
+              exitCode: data.run?.code || 0,
+              isError: data.run?.code !== 0,
+            };
+          } else {
+            // Default format
+            const stdout = data.stdout || data.output || "";
+            const stderr = data.stderr || data.errors || "";
+            const exitCode = data.code || data.exit_code || 0;
+            return {
+              stdout: stdout,
+              stderr: stderr,
+              exitCode: exitCode,
+              isError: exitCode !== 0,
+            };
+          }
+        }
+      } catch (apiError) {
+        console.warn(`API ${apiUrl} failed:`, apiError);
+        continue; // Try next API
       }
-      
-      return {
-        stdout: "",
-        stderr: errorMessage,
-        exitCode: 1,
-        isError: true,
-      };
     }
-
-    const data: RextesterExecuteResponse = await res.json();
-
-    // Rextester API returns different field names
-    const stdout = data.stdout || data.output || "";
-    const stderr = data.stderr || data.errors || "";
-    const exitCode = data.code || data.exit_code || 0;
-
+    
+    // If all APIs fail, return a helpful error
     return {
-      stdout: stdout,
-      stderr: stderr,
-      exitCode: exitCode,
-      isError: exitCode !== 0,
+      stdout: "",
+      stderr: "All code execution services are currently unavailable. Please try again later or use a local compiler.",
+      exitCode: 1,
+      isError: true,
     };
+    
   } catch (error) {
     return {
       stdout: "",
